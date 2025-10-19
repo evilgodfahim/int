@@ -13,7 +13,7 @@ FINAL_XML_FILE = "final.xml"
 LAST_SEEN_FILE = "last_seen.json"
 FINAL_OCCURRENCE_THRESHOLD = 3   # must appear in >=3 feeds
 MAX_ARTICLE_AGE_DAYS = 1         # skip articles older than 1 day
-SIMILARITY_THRESHOLD = 0.80      # similarity for title clustering
+SIMILARITY_THRESHOLD = 0.50      # similarity for title clustering
 
 # ===== MODEL =====
 model = SentenceTransformer("all-MiniLM-L6-v2")
