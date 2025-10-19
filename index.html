@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fahim’s Feed Aggregator</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #fafafa;
+      color: #222;
+      line-height: 1.6;
+      margin: 2rem auto;
+      max-width: 600px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .section {
+      background: #fff;
+      padding: 1rem 1.2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      margin-bottom: 1rem;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #777;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌐 Fahim’s Feed Aggregator</h1>
+
+  <div class="section">
+    <h2>Temporary Feed (hourly)</h2>
+    <p>Updated every hour at <strong>:45</strong> (UTC). Includes all clustered articles from feeds.</p>
+    <p><a href="temp.xml">View temp.xml</a></p>
+  </div>
+
+  <div class="section">
+    <h2>Final Feed (daily)</h2>
+    <p>Updated daily at <strong>12:00 AM BD time</strong>. Includes top reputable or recurring articles.</p>
+    <p><a href="final.xml">View final.xml</a></p>
+  </div>
+
+  <footer>
+    <p>Generated automatically by GitHub Actions.</p>
+  </footer>
+</body>
+</html>
