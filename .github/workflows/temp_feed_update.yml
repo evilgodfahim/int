@@ -1,0 +1,33 @@
+name: Temporary Feed Update
+
+on:
+  schedule:
+    - cron: '45 * * * *'  # Every hour at :45 UTC
+  workflow_dispatch:
+
+jobs:
+  update-temp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install Dependencies
+        run: |
+          pip install feedparser sentence-transformers scikit-learn
+
+      - name: Run Temporary Feed Script
+        run: python temp_feed.py
+
+      - name: Commit and Push Updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add temp.xml last_seen_temp.json
+          git commit -m "Update temporary feed $(date)" || echo "No changes"
+          git push
