@@ -12,6 +12,12 @@ https://feeds.bbci.co.uk/news/world/rss.xml
 https://politepol.com/fd/BzFhFtawKQrt.xml
 https://asiatimes.com/feed/
 https://www.scmp.com/rss/318199/feed
+https://politepol.com/fd/x7ZadWalRg3O.xml
+https://www.scmp.com/rss/5/feed
+https://www.themoscowtimes.com/rss/news
+https://www.ft.com/rss/world
+https://feeds.guardian.co.uk/theguardian/world/rss
+https://evilgodfahim.github.io/ap-merge/output/merged.xml
 
 # BD en Int.
 https://evilgodfahim.github.io/bdnint/output/merged.xml
