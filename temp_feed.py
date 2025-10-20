@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 FEEDS_FILE = "feeds.txt"
 OUTPUT_FILE = "temp.xml"
 LAST_SEEN_FILE = "last_seen_temp.json"
-THRESHOLD = 0.8
+THRESHOLD = 0.50
 
 REPUTATION = [
     "The New York Times", "BBC", "Al Jazeera", "South China Morning Post",
