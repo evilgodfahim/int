@@ -18,6 +18,7 @@ https://www.themoscowtimes.com/rss/news
 https://www.ft.com/rss/world
 https://feeds.guardian.co.uk/theguardian/world/rss
 https://evilgodfahim.github.io/ap-merge/output/merged.xml
+https://news.un.org/feed/subscribe/en/news/all/rss.xml
 
 # BD en Int.
 https://evilgodfahim.github.io/bdnint/output/merged.xml
