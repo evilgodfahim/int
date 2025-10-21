@@ -62,10 +62,19 @@ def load_last_seen():
     if os.path.exists(LAST_SEEN_FILE):
         with open(LAST_SEEN_FILE, "r") as f:
             data = json.load(f)
-            # Clean old entries (>24 hours)
             cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_ARTICLE_AGE_HOURS)
-            return {url: ts for url, ts in data.items() 
-                   if datetime.fromisoformat(ts) > cutoff}
+            cleaned = {}
+            for url, ts in data.items():
+                try:
+                    dt = datetime.fromisoformat(ts)
+                    # Ensure timezone-aware
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    if dt > cutoff:
+                        cleaned[url] = ts
+                except Exception:
+                    continue
+            return cleaned
     return {}
 
 def save_last_seen(data):
