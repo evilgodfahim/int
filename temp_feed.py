@@ -10,6 +10,7 @@ FEEDS_FILE = "feeds.txt"
 OUTPUT_FILE = "temp.xml"
 LAST_SEEN_FILE = "last_seen_temp.json"
 MAX_ARTICLE_AGE_HOURS = 24  # Keep only articles from last 24 hours
+MAX_ITEMS = 500  # Maximum number of articles in temp.xml
 
 # Set UTF-8 encoding for output
 if sys.stdout.encoding != 'utf-8':
@@ -67,7 +68,6 @@ def load_last_seen():
             for url, ts in data.items():
                 try:
                     dt = datetime.fromisoformat(ts)
-                    # Ensure timezone-aware
                     if dt.tzinfo is None:
                         dt = dt.replace(tzinfo=timezone.utc)
                     if dt > cutoff:
@@ -109,12 +109,11 @@ def clean_old_articles(root):
     for item in channel.findall("item"):
         pub_date_str = item.findtext("pubDate", "")
         try:
-            pub_date = datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M:%S %Z")
+            pub_date = datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M:%S GMT")
             pub_date = pub_date.replace(tzinfo=timezone.utc)
             if pub_date < cutoff:
                 items_to_remove.append(item)
         except:
-            # If can't parse date, remove it to be safe
             items_to_remove.append(item)
     
     for item in items_to_remove:
@@ -122,102 +121,102 @@ def clean_old_articles(root):
     
     return len(items_to_remove)
 
+def enforce_max_items(root):
+    """Keep only the newest MAX_ITEMS articles"""
+    channel = root.find("channel")
+    if channel is None:
+        return 0
+    items = channel.findall("item")
+    if len(items) <= MAX_ITEMS:
+        return 0
+    # Remove oldest articles beyond MAX_ITEMS
+    for item in items[MAX_ITEMS:]:
+        channel.remove(item)
+    return len(items) - MAX_ITEMS
+
 # ===== MAIN COLLECTION LOGIC =====
 def collect_articles():
     """Main function: collect new articles from all feeds"""
     
-    # Load feeds list
     if not os.path.exists(FEEDS_FILE):
         print(f"❌ {FEEDS_FILE} not found")
         return
     
     with open(FEEDS_FILE, "r") as f:
-        feed_urls = [line.strip() for line in f 
-                    if line.strip() and not line.startswith("#")]
+        feed_urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
     
     print(f"📡 Fetching from {len(feed_urls)} feeds...")
     
-    # Load tracking data
     last_seen = load_last_seen()
     tree, root = load_existing_xml()
     
-    # Clean old articles first
-    removed_count = clean_old_articles(root)
-    print(f"🗑️  Removed {removed_count} old articles (>24h)")
+    removed_old = clean_old_articles(root)
+    print(f"🗑️  Removed {removed_old} old articles (>24h)")
     
-    # Collect new articles
     new_articles = []
     feed_errors = []
     
     for feed_url in feed_urls:
         try:
             feed = feedparser.parse(feed_url)
-            
             for entry in feed.entries:
-                # Basic validation
                 title = entry.get("title", "").strip()
                 link = entry.get("link", "").strip()
                 
                 if not title or not link:
                     continue
-                
-                # Skip if already seen in last 24 hours
                 if link in last_seen:
                     continue
-                
-                # Parse date and check recency
                 pub_date = parse_date(entry)
                 if not is_recent(pub_date):
                     continue
-                
-                # Get source
                 source = get_source(entry)
                 
-                # Add to collection
                 new_articles.append({
                     "title": title,
                     "link": link,
                     "source": source,
                     "pubDate": pub_date
                 })
-                
-                # Mark as seen
                 last_seen[link] = pub_date.isoformat()
-        
         except Exception as e:
             feed_errors.append(f"{feed_url}: {str(e)}")
     
-    # Add new articles to XML
+    # Add new articles at the top
     channel = root.find("channel")
+    first_item = channel.find("item")
     for article in new_articles:
-        item = ET.SubElement(channel, "item")
+        item = ET.Element("item")
         ET.SubElement(item, "title").text = article["title"]
         ET.SubElement(item, "link").text = article["link"]
         ET.SubElement(item, "source").text = article["source"]
         ET.SubElement(item, "pubDate").text = article["pubDate"].strftime("%a, %d %b %Y %H:%M:%S GMT")
+        if first_item is not None:
+            channel.insert(list(channel).index(first_item), item)
+        else:
+            channel.append(item)
     
-    # Update channel metadata
+    trimmed = enforce_max_items(root)
+    if trimmed:
+        print(f"📉 Trimmed {trimmed} oldest articles to enforce {MAX_ITEMS} limit")
+    
     last_build = channel.find("lastBuildDate")
     if last_build is None:
         last_build = ET.SubElement(channel, "lastBuildDate")
     last_build.text = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
     
-    # Save everything
     tree.write(OUTPUT_FILE, encoding="utf-8", xml_declaration=True)
     save_last_seen(last_seen)
     
-    # Report
     total_items = len(channel.findall("item"))
     print(f"✅ Added {len(new_articles)} new articles")
     print(f"📦 Total in temp.xml: {total_items} articles")
-    print(f"⏱️  Processing time: ~{len(feed_urls) * 0.5:.1f} seconds")
     
     if feed_errors:
         print(f"⚠️  Feed errors ({len(feed_errors)}):")
-        for error in feed_errors[:5]:  # Show first 5
+        for error in feed_errors[:5]:
             print(f"   {error}")
     
-    # Exit with success
     sys.exit(0)
 
 if __name__ == "__main__":
