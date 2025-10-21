@@ -1,52 +1,75 @@
-name: Final Feed Publish
+name: Daily Curation (Stage 2)
 
 on:
   schedule:
-    - cron: '0 18 * * *'  # 12:00 AM BD time (18:00 UTC)
+    - cron: '0 18 * * *'  # 12:00 AM Bangladesh time (18:00 UTC)
   workflow_dispatch:
 
 jobs:
-  publish-final:
+  curate-final:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.x
+          python-version: '3.11'
 
-      # 3️⃣ Cache pip dependencies
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-v1
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 4️⃣ Install dependencies
+      - name: Cache Python site-packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /opt/hostedtoolcache/Python/3.11*/x64/lib/python3.11/site-packages
+          key: ${{ runner.os }}-python-3.11-packages-${{ hashFiles('**/requirements.txt') }}-v1
+          restore-keys: |
+            ${{ runner.os }}-python-3.11-packages-
+
+      - name: Cache sentence-transformers models
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/torch
+            ~/.cache/huggingface
+          key: ${{ runner.os }}-sentence-transformers-all-MiniLM-L6-v2-v1
+          restore-keys: |
+            ${{ runner.os }}-sentence-transformers-
+
       - name: Install Dependencies
         run: |
-          pip install feedparser sentence-transformers scikit-learn
+          pip install --no-cache-dir sentence-transformers scikit-learn numpy torch
 
-      # 5️⃣ Run final feed script
-      - name: Run Final Feed Script
+      - name: Pre-download and cache model
+        run: |
+          python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('all-MiniLM-L6-v2'); print('Model cached successfully')"
+
+      - name: Run Daily Curation
         run: python final_feed.py
 
-      # 6️⃣ Commit and push updates safely
-      - name: Commit and Push Final XML
+      - name: Commit and Push Final Feed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Make sure last_seen file exists
-          touch last_seen_final.json
+          # Ensure files exist
+          touch final.xml last_seen_final.json
           
           git add final.xml last_seen_final.json
-          git commit -m "Publish final feed $(date)" || echo "No changes"
-          git push
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "📰 Daily curation: $(date -u +"%Y-%m-%d")"
+            git push
+          fi
