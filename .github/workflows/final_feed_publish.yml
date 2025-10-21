@@ -18,6 +18,7 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Cache pip packages (general)
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -26,6 +27,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      # Cache installed site-packages (libraries)
       - name: Cache Python site-packages
         uses: actions/cache@v4
         with:
@@ -35,6 +37,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-python-3.11-packages-
 
+      # Cache SentenceTransformer model weights
       - name: Cache sentence-transformers models
         uses: actions/cache@v4
         with:
@@ -45,28 +48,33 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sentence-transformers-
 
+      # Install dependencies (feedparser added)
       - name: Install Dependencies
         run: |
-          pip install --no-cache-dir sentence-transformers scikit-learn numpy torch
+          pip install --upgrade pip
+          pip install --no-cache-dir sentence-transformers scikit-learn numpy torch feedparser
 
+      # Preload and confirm SentenceTransformer model cache
       - name: Pre-download and cache model
         run: |
-          python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('all-MiniLM-L6-v2'); print('Model cached successfully')"
+          python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('all-MiniLM-L6-v2'); print('✅ Model cached successfully')"
 
+      # Run the daily feed curation script
       - name: Run Daily Curation
         run: python final_feed.py
 
+      # Commit and push only if final.xml or last_seen_final.json changed
       - name: Commit and Push Final Feed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Ensure files exist
+          # Ensure output files exist
           touch final.xml last_seen_final.json
           
           git add final.xml last_seen_final.json
           
-          # Only commit if there are changes
+          # Commit only when there are new changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
