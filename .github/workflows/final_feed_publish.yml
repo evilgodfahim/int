@@ -2,7 +2,7 @@ name: Daily Curation (Stage 2)
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 08:00 AM Bangladesh time (18:00 UTC)
+    - cron: '0 2 * * *'  # Runs daily at 08:00 AM Bangladesh time (02:00 UTC)
   workflow_dispatch:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Cache pip packages (general)
+      # ===== CACHE: pip packages =====
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -27,54 +27,53 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # Cache installed site-packages (libraries)
+      # ===== CACHE: site-packages =====
       - name: Cache Python site-packages
         uses: actions/cache@v4
         with:
-          path: |
-            /opt/hostedtoolcache/Python/3.11*/x64/lib/python3.11/site-packages
+          path: /opt/hostedtoolcache/Python/3.11*/x64/lib/python3.11/site-packages
           key: ${{ runner.os }}-python-3.11-packages-${{ hashFiles('**/requirements.txt') }}-v1
           restore-keys: |
             ${{ runner.os }}-python-3.11-packages-
 
-      # Cache SentenceTransformer model weights
-      - name: Cache sentence-transformers models
+      # ===== CACHE: Transformer model =====
+      - name: Cache SentenceTransformer model
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/torch
             ~/.cache/huggingface
-          key: ${{ runner.os }}-sentence-transformers-all-MiniLM-L6-v2-v1
+          key: ${{ runner.os }}-sentence-transformers-all-mpnet-base-v2-v1
           restore-keys: |
             ${{ runner.os }}-sentence-transformers-
 
-      # Install dependencies (feedparser added)
-      - name: Install Dependencies
+      # ===== INSTALL DEPENDENCIES =====
+      - name: Install Python Dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install --no-cache-dir sentence-transformers scikit-learn numpy torch feedparser
 
-      # Preload and confirm SentenceTransformer model cache
-      - name: Pre-download and cache model
+      # ===== PRELOAD MODEL (ensure cached) =====
+      - name: Preload and Verify Model Cache
         run: |
-          python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('all-MiniLM-L6-v2'); print('✅ Model cached successfully')"
+          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-mpnet-base-v2'); print('✅ all-mpnet-base-v2 model cached successfully')"
 
-      # Run the daily feed curation script
+      # ===== RUN CURATION =====
       - name: Run Daily Curation
         run: python final_feed.py
 
-      # Commit and push only if final.xml or last_seen_final.json changed
+      # ===== COMMIT & PUSH =====
       - name: Commit and Push Final Feed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || true
           
           # Ensure output files exist
           touch final.xml last_seen_final.json
           
           git add final.xml last_seen_final.json
           
-          # Commit only when there are new changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
