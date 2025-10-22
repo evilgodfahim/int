@@ -57,7 +57,7 @@ REPUTATION = {
 print("🔄 Loading embedding model...")
 try:
     # Switched to MPNet — more robust for semantic equivalence
-    model = SentenceTransformer("all-mpnet-base-v2")
+    model = SentenceTransformer("bge-base-en-v1.5")
     print("✅ Model loaded successfully (all-mpnet-base-v2)")
 except Exception as e:
     print(f"❌ Failed to load model: {e}")
