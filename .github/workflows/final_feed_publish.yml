@@ -56,7 +56,7 @@ jobs:
       # ===== PRELOAD MODEL (ensure cached) =====
       - name: Preload and Verify Model Cache
         run: |
-          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('bge-base-en-v1.5'); print('✅ bge-base-en-v1.5 model cached successfully')"
+          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-base-en-v1.5'); print('✅ BAAI/bge-base-en-v1.5 model cached successfully')"
 
       # ===== RUN CURATION =====
       - name: Run Daily Curation
