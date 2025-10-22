@@ -7,35 +7,16 @@ on:
 
 jobs:
   collect-temp:
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/setup-python.yml
+    with:
+      python-version: '3.11'
 
+  run-task:
+    runs-on: ubuntu-latest
+    needs: collect-temp
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-temp-${{ hashFiles('**/requirements.txt') }}-v1
-          restore-keys: |
-            ${{ runner.os }}-pip-temp-
-            ${{ runner.os }}-pip-
-
-      - name: Cache Python site-packages (feedparser)
-        uses: actions/cache@v4
-        with:
-          path: |
-            /opt/hostedtoolcache/Python/3.11*/x64/lib/python3.11/site-packages
-          key: ${{ runner.os }}-python-3.11-feedparser-${{ hashFiles('**/requirements.txt') }}-v1
-          restore-keys: |
-            ${{ runner.os }}-python-3.11-feedparser-
-            ${{ runner.os }}-python-3.11-packages-
 
       - name: Install Dependencies
         run: |
@@ -48,13 +29,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Ensure files exist
           touch temp.xml last_seen_temp.json
-          
           git add temp.xml last_seen_temp.json
-          
-          # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
