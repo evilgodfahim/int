@@ -56,8 +56,8 @@ REPUTATION = {
 # ===== MODEL =====
 print("🔄 Loading embedding model...")
 try:
-    # Switched to MPNet — more robust for semantic equivalence
-    model = SentenceTransformer("BAAI/bge-base-en-v1.5")
+    # Using MPNet for robust semantic equivalence
+    model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
     print("✅ Model loaded successfully (all-mpnet-base-v2)")
 except Exception as e:
     print(f"❌ Failed to load model: {e}")
@@ -91,22 +91,22 @@ def load_articles_from_temp():
     if not os.path.exists(TEMP_XML_FILE):
         print(f"❌ {TEMP_XML_FILE} not found")
         return []
-    
+
     tree = ET.parse(TEMP_XML_FILE)
     root = tree.getroot()
     articles = []
-    
+
     for item in root.findall(".//item"):
         title = item.findtext("title", "").strip()
         link = item.findtext("link", "").strip()
         pub_date_str = item.findtext("pubDate", "").strip()
         source = item.findtext("source", "Unknown").strip()
-        
+
         if not title or not link:
             continue
-        
+
         pub_date = parse_xml_date(pub_date_str)
-        
+
         articles.append({
             "title": title,
             "normalized_title": normalize_title(title),
@@ -115,7 +115,7 @@ def load_articles_from_temp():
             "pubDateStr": pub_date_str,
             "source": source
         })
-    
+
     print(f"📥 Loaded {len(articles)} articles from temp.xml")
     return articles
 
@@ -123,7 +123,7 @@ def load_articles_from_temp():
 def cluster_articles(articles):
     if not articles:
         return []
-    
+
     print("🧠 Computing embeddings...")
     try:
         titles = [a["normalized_title"] for a in articles]
@@ -132,18 +132,18 @@ def cluster_articles(articles):
     except Exception as e:
         print(f"❌ Encoding failed: {e}")
         return [[a] for a in articles]
-    
+
     print("🔗 Clustering articles...")
     clusters = []
     used = set()
-    
+
     for i, emb_i in enumerate(embeddings):
         if i in used:
             continue
-        
+
         cluster = [articles[i]]
         used.add(i)
-        
+
         for j in range(i + 1, len(embeddings)):
             if j in used:
                 continue
@@ -151,9 +151,9 @@ def cluster_articles(articles):
             if similarity >= SIMILARITY_THRESHOLD:
                 cluster.append(articles[j])
                 used.add(j)
-        
+
         clusters.append(cluster)
-    
+
     print(f"📊 Created {len(clusters)} clusters from {len(articles)} articles")
     return clusters
 
@@ -207,10 +207,10 @@ def curate_final_feed():
     if not articles:
         print("⚠️  No articles to process")
         return
-    
+
     clusters = cluster_articles(articles)
     print(f"🔍 Filtering clusters (min {MIN_FEED_COUNT} feeds)...")
-    
+
     important_clusters = []
     for cluster in clusters:
         if len(set(a["source"] for a in cluster)) >= MIN_FEED_COUNT:
@@ -221,15 +221,15 @@ def curate_final_feed():
                 "cluster_size": len(cluster),
                 "importance": importance
             })
-    
+
     print(f"✨ Found {len(important_clusters)} important stories")
-    
+
     important_clusters.sort(key=lambda x: x["importance"]["score"], reverse=True)
-    
+
     last_seen = load_last_seen()
     new_last_seen = dict(last_seen)
     final_articles = []
-    
+
     for item in important_clusters:
         article = item["article"]
         if article["link"] not in last_seen:
@@ -237,7 +237,7 @@ def curate_final_feed():
             new_last_seen[article["link"]] = datetime.now(timezone.utc).isoformat()
         if len(final_articles) >= MAX_FINAL_ARTICLES:
             break
-    
+
     # Generate final.xml
     rss = ET.Element("rss", version="2.0")
     channel = ET.SubElement(rss, "channel")
@@ -245,7 +245,7 @@ def curate_final_feed():
     ET.SubElement(channel, "link").text = "https://evilgodfahim.github.io/"
     ET.SubElement(channel, "description").text = "Curated important news from multiple sources"
     ET.SubElement(channel, "lastBuildDate").text = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-    
+
     for item in final_articles:
         article = item["article"]
         imp = item["importance"]
@@ -259,12 +259,12 @@ def curate_final_feed():
         if imp['has_breaking']:
             desc += " | ⚡ Breaking"
         ET.SubElement(xml_item, "description").text = desc
-    
+
     tree = ET.ElementTree(rss)
     ET.indent(tree, space="  ")
     tree.write(FINAL_XML_FILE, encoding="utf-8", xml_declaration=True)
     save_last_seen(new_last_seen)
-    
+
     print(f"\n✅ Final feed generated: {FINAL_XML_FILE}")
     print(f"📝 Total stories: {len(final_articles)}")
 
