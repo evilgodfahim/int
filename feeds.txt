@@ -1,4 +1,3 @@
-# International
 https://www.middleeasteye.net/rss
 https://evilgodfahim.github.io/fpost/output/merged.xml
 https://evilgodfahim.github.io/nytint/combined.xml
@@ -19,8 +18,6 @@ https://www.ft.com/rss/world
 https://feeds.guardian.co.uk/theguardian/world/rss
 https://evilgodfahim.github.io/ap-merge/output/merged.xml
 https://news.un.org/feed/subscribe/en/news/all/rss.xml
-
-# BD en Int.
 https://evilgodfahim.github.io/bdnint/output/merged.xml
 https://evilgodfahim.github.io/feint/output/merged.xml
 https://evilgodfahim.github.io/NAINT/output/merged.xml
