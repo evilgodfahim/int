@@ -43,7 +43,7 @@ jobs:
           path: |
             ~/.cache/torch
             ~/.cache/huggingface
-          key: ${{ runner.os }}-sentence-transformers-bge-base-en-v1.5
+          key: ${{ runner.os }}-sentence-transformers-all-mpnet-base-v2
           restore-keys: |
             ${{ runner.os }}-sentence-transformers-
 
@@ -56,7 +56,7 @@ jobs:
       # ===== PRELOAD MODEL (ensure cached) =====
       - name: Preload and Verify Model Cache
         run: |
-          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-base-en-v1.5'); print('✅ BAAI/bge-base-en-v1.5 model cached successfully')"
+          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-mpnet-base-v2'); print('✅ all-mpnet-base-v2 model cached successfully')"
 
       # ===== RUN CURATION =====
       - name: Run Daily Curation
