@@ -19,7 +19,7 @@ LAST_SEEN_FILE = "last_seen_final.json"
 
 # Thresholds
 MIN_FEED_COUNT = 3  # Story must appear in at least 3 feeds
-SIMILARITY_THRESHOLD = 0.70  # Title clustering threshold
+SIMILARITY_THRESHOLD = 0.55  # Title clustering threshold
 MAX_FINAL_ARTICLES = 500  # Maximum articles in final feed
 
 # Importance scoring weights
