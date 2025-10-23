@@ -25,15 +25,6 @@ MAX_FINAL_ARTICLES = 500  # Maximum articles in final feed
 # Importance scoring weights
 WEIGHT_FEED_COUNT = 10.0
 WEIGHT_REPUTATION = 0.5
-WEIGHT_RECENCY = 2.0
-KEYWORD_BOOST = 15.0
-
-# Breaking news keywords
-BREAKING_KEYWORDS = [
-    "breaking", "urgent", "just in", "developing", "live",
-    "war", "attack", "crisis", "death", "killed", "election",
-    "breaking news", "update"
-]
 
 # Source reputation hierarchy (higher = more reputable)
 REPUTATION = {
@@ -72,10 +63,6 @@ def normalize_title(title):
 
 def get_reputation_score(source):
     return REPUTATION.get(source, 0)
-
-def has_breaking_keywords(title):
-    title_lower = title.lower()
-    return any(keyword in title_lower for keyword in BREAKING_KEYWORDS)
 
 def parse_xml_date(date_str):
     try:
@@ -162,22 +149,16 @@ def calculate_importance(cluster):
     unique_sources = len(set(a["source"] for a in cluster))
     reputations = [get_reputation_score(a["source"]) for a in cluster]
     avg_reputation = sum(reputations) / len(reputations) if reputations else 0
-    newest_date = max(a["pubDate"] for a in cluster)
-    hours_old = (datetime.now(timezone.utc) - newest_date.replace(tzinfo=timezone.utc)).total_seconds() / 3600
-    recency_score = max(0, 24 - hours_old)
-    breaking_boost = KEYWORD_BOOST if any(has_breaking_keywords(a["title"]) for a in cluster) else 0
+    
     score = (
         unique_sources * WEIGHT_FEED_COUNT +
-        avg_reputation * WEIGHT_REPUTATION +
-        recency_score * WEIGHT_RECENCY +
-        breaking_boost
+        avg_reputation * WEIGHT_REPUTATION
     )
+    
     return {
         "score": score,
         "feed_count": unique_sources,
-        "avg_reputation": avg_reputation,
-        "recency_score": recency_score,
-        "has_breaking": breaking_boost > 0
+        "avg_reputation": avg_reputation
     }
 
 def select_best_article(cluster):
@@ -209,70 +190,4 @@ def curate_final_feed():
         return
 
     clusters = cluster_articles(articles)
-    print(f"🔍 Filtering clusters (min {MIN_FEED_COUNT} feeds)...")
-
-    important_clusters = []
-    for cluster in clusters:
-        if len(set(a["source"] for a in cluster)) >= MIN_FEED_COUNT:
-            importance = calculate_importance(cluster)
-            best_article = select_best_article(cluster)
-            important_clusters.append({
-                "article": best_article,
-                "cluster_size": len(cluster),
-                "importance": importance
-            })
-
-    print(f"✨ Found {len(important_clusters)} important stories")
-
-    important_clusters.sort(key=lambda x: x["importance"]["score"], reverse=True)
-
-    last_seen = load_last_seen()
-    new_last_seen = dict(last_seen)
-    final_articles = []
-
-    for item in important_clusters:
-        article = item["article"]
-        if article["link"] not in last_seen:
-            final_articles.append(item)
-            new_last_seen[article["link"]] = datetime.now(timezone.utc).isoformat()
-        if len(final_articles) >= MAX_FINAL_ARTICLES:
-            break
-
-    # Generate final.xml
-    rss = ET.Element("rss", version="2.0")
-    channel = ET.SubElement(rss, "channel")
-    ET.SubElement(channel, "title").text = "Fahim Final News Feed"
-    ET.SubElement(channel, "link").text = "https://evilgodfahim.github.io/"
-    ET.SubElement(channel, "description").text = "Curated important news from multiple sources"
-    ET.SubElement(channel, "lastBuildDate").text = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-
-    for item in final_articles:
-        article = item["article"]
-        imp = item["importance"]
-        xml_item = ET.SubElement(channel, "item")
-        ET.SubElement(xml_item, "title").text = article["title"]
-        ET.SubElement(xml_item, "link").text = article["link"]
-        ET.SubElement(xml_item, "pubDate").text = article["pubDateStr"]
-        source_text = f"{article['source']} (+{item['cluster_size']-1} other sources)" if item['cluster_size'] > 1 else article["source"]
-        ET.SubElement(xml_item, "source").text = source_text
-        desc = f"Importance: {imp['score']:.1f} | Covered by {imp['feed_count']} feeds | Reputation: {imp['avg_reputation']:.1f}"
-        if imp['has_breaking']:
-            desc += " | ⚡ Breaking"
-        ET.SubElement(xml_item, "description").text = desc
-
-    tree = ET.ElementTree(rss)
-    ET.indent(tree, space="  ")
-    tree.write(FINAL_XML_FILE, encoding="utf-8", xml_declaration=True)
-    save_last_seen(new_last_seen)
-
-    print(f"\n✅ Final feed generated: {FINAL_XML_FILE}")
-    print(f"📝 Total stories: {len(final_articles)}")
-
-if __name__ == "__main__":
-    try:
-        curate_final_feed()
-    except Exception as e:
-        print(f"\n❌ Fatal error: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    print(f"🔍 Filtering clusters (min {MIN_FEED
