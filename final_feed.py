@@ -20,7 +20,6 @@ LAST_SEEN_FILE = "last_seen_final.json"
 # Thresholds
 MIN_FEED_COUNT = 4  # Story must appear in at least 3 feeds
 SIMILARITY_THRESHOLD = 0.50  # Title clustering threshold
-MAX_FINAL_ARTICLES = 500  # Maximum articles in final feed (no longer used for limiting)
 TOP_N_ARTICLES = 20  # Only keep top 20 articles
 
 # Importance scoring weights
@@ -48,7 +47,6 @@ REPUTATION = {
 # ===== MODEL =====
 print("🔄 Loading embedding model...")
 try:
-    # Using MPNet for robust semantic equivalence
     model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
     print("✅ Model loaded successfully (all-mpnet-base-v2)")
 except Exception as e:
@@ -63,7 +61,7 @@ def normalize_title(title):
     return title.lower()
 
 def get_reputation_score(source):
-    return REPUTATION.get(source, 0)
+    return REPUTATION.get(source, 1)  # default reputation = 1 for unknown sources
 
 def parse_xml_date(date_str):
     try:
