@@ -28,20 +28,20 @@ WEIGHT_REPUTATION = 0.5
 
 # Source reputation hierarchy (higher = more reputable)
 REPUTATION = {
-    "The New York Times": 14,
-    "BBC": 13,
-    "Al Jazeera": 12,
-    "The Hindu": 11,
-    "South China Morning Post": 10,
-    "Eurasia Review": 9,
-    "Asia Times": 8,
-    "The Moscow Times": 7,
-    "Middle East Eye": 6,
-    "Middle East Monitor": 5,
-    "The Daily Star": 4,
-    "The Business Standard": 3,
-    "Financial Express": 2,
-    "United News Bangladesh": 1,
+    "The New York Times": 1,
+    "BBC": 10,
+    "Al Jazeera": 9,
+    "The Hindu": 8,
+    "South China Morning Post": 6,
+    "Eurasia Review": 7,
+    "Asia Times": 5,
+    "The Moscow Times": 4,
+    "Middle East Eye": 3,
+    "Middle East Monitor": 2,
+    "The Daily Star": 14,
+    "The Business Standard": 12,
+    "Financial Express": 13,
+    "United News Bangladesh": 11,
 }
 
 # ===== MODEL =====
