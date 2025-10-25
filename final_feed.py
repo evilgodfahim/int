@@ -20,7 +20,8 @@ LAST_SEEN_FILE = "last_seen_final.json"
 # Thresholds
 MIN_FEED_COUNT = 4  # Story must appear in at least 3 feeds
 SIMILARITY_THRESHOLD = 0.50  # Title clustering threshold
-MAX_FINAL_ARTICLES = 500  # Maximum articles in final feed
+MAX_FINAL_ARTICLES = 500  # Maximum articles in final feed (no longer used for limiting)
+TOP_N_ARTICLES = 20  # Only keep top 20 articles
 
 # Importance scoring weights
 WEIGHT_FEED_COUNT = 10.0
@@ -211,13 +212,11 @@ def curate_final_feed():
     new_last_seen = dict(last_seen)
     final_articles = []
 
-    for item in important_clusters:
+    for item in important_clusters[:TOP_N_ARTICLES]:
         article = item["article"]
         if article["link"] not in last_seen:
             final_articles.append(item)
             new_last_seen[article["link"]] = datetime.now(timezone.utc).isoformat()
-        if len(final_articles) >= MAX_FINAL_ARTICLES:
-            break
 
     # Generate final.xml
     rss = ET.Element("rss", version="2.0")
