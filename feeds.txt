@@ -26,3 +26,4 @@ https://politepol.com/fd/RVHJinKtHIEp.xml
 https://politepol.com/fd/MQdEEfACJVgu.xml
 https://www.jpost.com/Rss/RssFeedsMiddleEastNews.aspx
 https://politepol.com/fd/SvkVrxDkZguQ.xml
+https://news.google.com/rss/search?q=source:Reuters&hl=en-US&gl=US&ceid=US:en
