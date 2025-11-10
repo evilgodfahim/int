@@ -76,3 +76,4 @@ https://feeds.abcnews.com/abcnews/internationalheadlines
 https://rsshub.app/reuters/world
 https://www.moonofalabama.org/atom.xml
 https://southfront.press/feed/
+https://politepol.com/fd/SvkVrxDkZguQ.xml
