@@ -78,3 +78,4 @@ https://www.moonofalabama.org/atom.xml
 https://southfront.press/feed/
 https://politepol.com/fd/SvkVrxDkZguQ.xml
 https://evilgodfahim.github.io/reur/articles.xml
+https://politepol.com/fd/wZSop7kSpq0G.xml
