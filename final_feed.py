@@ -7,6 +7,8 @@ import sys
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import fcntl
+import time
 
 # Set UTF-8 encoding for output
 if sys.stdout.encoding != 'utf-8':
@@ -16,6 +18,7 @@ if sys.stdout.encoding != 'utf-8':
 TEMP_XML_FILE = "temp.xml"
 FINAL_XML_FILE = "final.xml"
 LAST_SEEN_FILE = "last_seen_final.json"
+LOCK_FILE = ".final_feed.lock"
 
 # Thresholds
 MIN_FEED_COUNT = 3
@@ -43,6 +46,33 @@ REPUTATION = {
     "Financial Express": 13,
     "United News Bangladesh": 11,
 }
+
+# ===== FILE LOCKING =====
+class FileLock:
+    def __init__(self, lockfile):
+        self.lockfile = lockfile
+        self.fd = None
+    
+    def __enter__(self):
+        self.fd = open(self.lockfile, 'w')
+        try:
+            fcntl.flock(self.fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.fd.write(str(os.getpid()))
+            self.fd.flush()
+            return self
+        except IOError:
+            print("⚠️  Another instance is running, waiting...")
+            fcntl.flock(self.fd.fileno(), fcntl.LOCK_EX)
+            return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.fd:
+            fcntl.flock(self.fd.fileno(), fcntl.LOCK_UN)
+            self.fd.close()
+            try:
+                os.remove(self.lockfile)
+            except:
+                pass
 
 # ===== MODEL =====
 print("🔄 Loading embedding model...")
@@ -77,32 +107,36 @@ def load_articles_from_temp():
         print(f"❌ {TEMP_XML_FILE} not found")
         return []
 
-    tree = ET.parse(TEMP_XML_FILE)
-    root = tree.getroot()
-    articles = []
+    try:
+        tree = ET.parse(TEMP_XML_FILE)
+        root = tree.getroot()
+        articles = []
 
-    for item in root.findall(".//item"):
-        title = item.findtext("title", "").strip()
-        link = item.findtext("link", "").strip()
-        pub_date_str = item.findtext("pubDate", "").strip()
-        source = item.findtext("source", "Unknown").strip()
+        for item in root.findall(".//item"):
+            title = item.findtext("title", "").strip()
+            link = item.findtext("link", "").strip()
+            pub_date_str = item.findtext("pubDate", "").strip()
+            source = item.findtext("source", "Unknown").strip()
 
-        if not title or not link:
-            continue
+            if not title or not link:
+                continue
 
-        pub_date = parse_xml_date(pub_date_str)
+            pub_date = parse_xml_date(pub_date_str)
 
-        articles.append({
-            "title": title,
-            "normalized_title": normalize_title(title),
-            "link": link,
-            "pubDate": pub_date,
-            "pubDateStr": pub_date_str,
-            "source": source
-        })
+            articles.append({
+                "title": title,
+                "normalized_title": normalize_title(title),
+                "link": link,
+                "pubDate": pub_date,
+                "pubDateStr": pub_date_str,
+                "source": source
+            })
 
-    print(f"📥 Loaded {len(articles)} articles from temp.xml")
-    return articles
+        print(f"📥 Loaded {len(articles)} articles from temp.xml")
+        return articles
+    except Exception as e:
+        print(f"❌ Failed to parse {TEMP_XML_FILE}: {e}")
+        return []
 
 # ===== CLUSTERING =====
 def cluster_articles(articles):
@@ -170,98 +204,141 @@ def select_best_article(cluster):
 # ===== DEDUPLICATION =====
 def load_last_seen():
     if os.path.exists(LAST_SEEN_FILE):
-        with open(LAST_SEEN_FILE, "r") as f:
-            data = json.load(f)
-            cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-            return {url: ts for url, ts in data.items() if datetime.fromisoformat(ts) > cutoff}
+        try:
+            with open(LAST_SEEN_FILE, "r") as f:
+                data = json.load(f)
+                cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+                return {url: ts for url, ts in data.items() if datetime.fromisoformat(ts) > cutoff}
+        except Exception as e:
+            print(f"⚠️  Failed to load {LAST_SEEN_FILE}: {e}, starting fresh")
+            return {}
     return {}
 
 def save_last_seen(data):
-    with open(LAST_SEEN_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    try:
+        # Atomic write using temp file
+        temp_file = LAST_SEEN_FILE + ".tmp"
+        with open(temp_file, "w") as f:
+            json.dump(data, f, indent=2)
+        os.replace(temp_file, LAST_SEEN_FILE)
+    except Exception as e:
+        print(f"❌ Failed to save {LAST_SEEN_FILE}: {e}")
+        raise
 
-# ===== MAIN CURATION =====
-def curate_final_feed():
-    articles = load_articles_from_temp()
-    if not articles:
-        print("⚠️  No articles to process")
-        return
-
-    clusters = cluster_articles(articles)
-    print(f"🔍 Filtering clusters (min {MIN_FEED_COUNT} feeds)...")
-
-    important_clusters = []
-    for cluster in clusters:
-        if len(set(a["source"] for a in cluster)) >= MIN_FEED_COUNT:
-            importance = calculate_importance(cluster)
-            best_article = select_best_article(cluster)
-            important_clusters.append({
-                "article": best_article,
-                "cluster_size": len(cluster),
-                "importance": importance,
-                "cluster": cluster  # full cluster for clickable matched titles
-            })
-
-    print(f"✨ Found {len(important_clusters)} important stories")
-
-    important_clusters.sort(key=lambda x: x["importance"]["score"], reverse=True)
-
-    last_seen = load_last_seen()
-    new_last_seen = dict(last_seen)
-    final_articles = []
-
-    for item in important_clusters[:TOP_N_ARTICLES]:
-        article = item["article"]
-        if article["link"] not in last_seen:
-            final_articles.append(item)
-            new_last_seen[article["link"]] = datetime.now(timezone.utc).isoformat()
-
+def create_empty_feed():
+    """Create an empty but valid RSS feed"""
     rss = ET.Element("rss", version="2.0")
     channel = ET.SubElement(rss, "channel")
     ET.SubElement(channel, "title").text = "Fahim Final News Feed"
     ET.SubElement(channel, "link").text = "https://evilgodfahim.github.io/"
     ET.SubElement(channel, "description").text = "Curated important news from multiple sources"
     ET.SubElement(channel, "lastBuildDate").text = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-
-    for item in final_articles:
-        article = item["article"]
-        cluster = item["cluster"]
-        imp = item["importance"]
-
-        xml_item = ET.SubElement(channel, "item")
-        ET.SubElement(xml_item, "title").text = article["title"]
-        ET.SubElement(xml_item, "link").text = article["link"]
-        ET.SubElement(xml_item, "pubDate").text = article["pubDateStr"]
-
-        source_text = f"{article['source']} (+{item['cluster_size']-1} other sources)" if item['cluster_size'] > 1 else article["source"]
-        ET.SubElement(xml_item, "source").text = source_text
-
-        # clickable matched titles
-        matched_links = [
-            f"- <a href='{a['link']}'>{a['title']}</a>"
-            for a in cluster
-            if a['title'] != article['title']
-        ]
-        if matched_links:
-            matched_text = "<br><b>Matched Titles:</b><br>" + "<br>".join(matched_links)
-        else:
-            matched_text = ""
-
-        desc_html = (
-            f"Importance: {imp['score']:.1f} | "
-            f"Covered by {imp['feed_count']} feeds | "
-            f"Reputation: {imp['avg_reputation']:.1f}"
-            f"{matched_text}"
-        )
-        ET.SubElement(xml_item, "description").text = f"<![CDATA[{desc_html}]]>"
-
+    
     tree = ET.ElementTree(rss)
     ET.indent(tree, space="  ")
-    tree.write(FINAL_XML_FILE, encoding="utf-8", xml_declaration=True)
-    save_last_seen(new_last_seen)
+    
+    # Atomic write
+    temp_file = FINAL_XML_FILE + ".tmp"
+    tree.write(temp_file, encoding="utf-8", xml_declaration=True)
+    os.replace(temp_file, FINAL_XML_FILE)
+    print(f"✅ Created empty feed: {FINAL_XML_FILE}")
 
-    print(f"\n✅ Final feed generated: {FINAL_XML_FILE}")
-    print(f"📝 Total stories: {len(final_articles)}")
+# ===== MAIN CURATION =====
+def curate_final_feed():
+    # Use file locking to prevent concurrent runs
+    with FileLock(LOCK_FILE):
+        articles = load_articles_from_temp()
+        
+        if not articles:
+            print("⚠️  No articles to process, creating empty feed")
+            create_empty_feed()
+            return
+
+        clusters = cluster_articles(articles)
+        print(f"🔍 Filtering clusters (min {MIN_FEED_COUNT} feeds)...")
+
+        important_clusters = []
+        for cluster in clusters:
+            if len(set(a["source"] for a in cluster)) >= MIN_FEED_COUNT:
+                importance = calculate_importance(cluster)
+                best_article = select_best_article(cluster)
+                important_clusters.append({
+                    "article": best_article,
+                    "cluster_size": len(cluster),
+                    "importance": importance,
+                    "cluster": cluster
+                })
+
+        print(f"✨ Found {len(important_clusters)} important stories")
+
+        if not important_clusters:
+            print("⚠️  No clusters met the minimum feed count, creating empty feed")
+            create_empty_feed()
+            return
+
+        important_clusters.sort(key=lambda x: x["importance"]["score"], reverse=True)
+
+        last_seen = load_last_seen()
+        new_last_seen = dict(last_seen)
+        final_articles = []
+
+        for item in important_clusters[:TOP_N_ARTICLES]:
+            article = item["article"]
+            if article["link"] not in last_seen:
+                final_articles.append(item)
+                new_last_seen[article["link"]] = datetime.now(timezone.utc).isoformat()
+
+        rss = ET.Element("rss", version="2.0")
+        channel = ET.SubElement(rss, "channel")
+        ET.SubElement(channel, "title").text = "Fahim Final News Feed"
+        ET.SubElement(channel, "link").text = "https://evilgodfahim.github.io/"
+        ET.SubElement(channel, "description").text = "Curated important news from multiple sources"
+        ET.SubElement(channel, "lastBuildDate").text = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+        for item in final_articles:
+            article = item["article"]
+            cluster = item["cluster"]
+            imp = item["importance"]
+
+            xml_item = ET.SubElement(channel, "item")
+            ET.SubElement(xml_item, "title").text = article["title"]
+            ET.SubElement(xml_item, "link").text = article["link"]
+            ET.SubElement(xml_item, "pubDate").text = article["pubDateStr"]
+
+            source_text = f"{article['source']} (+{item['cluster_size']-1} other sources)" if item['cluster_size'] > 1 else article["source"]
+            ET.SubElement(xml_item, "source").text = source_text
+
+            # clickable matched titles
+            matched_links = [
+                f"- <a href='{a['link']}'>{a['title']}</a>"
+                for a in cluster
+                if a['title'] != article['title']
+            ]
+            if matched_links:
+                matched_text = "<br><b>Matched Titles:</b><br>" + "<br>".join(matched_links)
+            else:
+                matched_text = ""
+
+            desc_html = (
+                f"Importance: {imp['score']:.1f} | "
+                f"Covered by {imp['feed_count']} feeds | "
+                f"Reputation: {imp['avg_reputation']:.1f}"
+                f"{matched_text}"
+            )
+            ET.SubElement(xml_item, "description").text = f"<![CDATA[{desc_html}]]>"
+
+        tree = ET.ElementTree(rss)
+        ET.indent(tree, space="  ")
+        
+        # Atomic write
+        temp_file = FINAL_XML_FILE + ".tmp"
+        tree.write(temp_file, encoding="utf-8", xml_declaration=True)
+        os.replace(temp_file, FINAL_XML_FILE)
+        
+        save_last_seen(new_last_seen)
+
+        print(f"\n✅ Final feed generated: {FINAL_XML_FILE}")
+        print(f"📝 Total stories: {len(final_articles)}")
 
 if __name__ == "__main__":
     try:
@@ -270,4 +347,9 @@ if __name__ == "__main__":
         print(f"\n❌ Fatal error: {e}")
         import traceback
         traceback.print_exc()
+        # Create empty feed on error to ensure valid output
+        try:
+            create_empty_feed()
+        except:
+            pass
         sys.exit(1)
