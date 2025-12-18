@@ -1,6 +1,8 @@
 https://www.middleeasteye.net/rss
 https://evilgodfahim.github.io/fpost/output/merged.xml
 https://evilgodfahim.github.io/nytint/combined.xml
+https://politepaul.com/fd/x2KIPhf4eLsZ.xml
+https://www.dawn.com/feeds/world/
 https://politepaul.com/fd/xZ040wnIFK1J.xml
 https://www.middleeastmonitor.com/feed/
 https://www.themoscowtimes.com/rss/news
