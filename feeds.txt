@@ -1,5 +1,6 @@
 https://www.middleeasteye.net/rss
 https://evilgodfahim.github.io/fpost/output/merged.xml
+https://evilgodfahim.github.io/gd/merged.xml
 https://evilgodfahim.github.io/nytint/combined.xml
 https://politepaul.com/fd/x2KIPhf4eLsZ.xml
 https://www.dawn.com/feeds/world/
