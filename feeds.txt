@@ -1,4 +1,5 @@
 https://www.middleeasteye.net/rss
+https://rss.dw.com/atom/rss-en-all
 https://evilgodfahim.github.io/fpost/output/merged.xml
 https://evilgodfahim.github.io/gd/merged.xml
 https://evilgodfahim.github.io/nytint/combined.xml
