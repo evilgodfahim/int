@@ -1,3 +1,4 @@
+https://evilgodfahim.github.io/ap-merge/output/merged.xml
 https://www.middleeasteye.net/rss
 https://rss.dw.com/atom/rss-en-all
 https://evilgodfahim.github.io/fpost/output/merged.xml
