@@ -1,4 +1,5 @@
 https://evilgodfahim.github.io/ap-merge/output/merged.xml
+https://evilgodfahim.github.io/wsjint/combined.xml
 https://evilgodfahim.github.io/wl/pau.xml
 https://evilgodfahim.github.io/afp/output/merged.xml
 https://evilgodfahim.github.io/yn/feeds/feed.xml
