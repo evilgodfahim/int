@@ -1,4 +1,5 @@
 https://evilgodfahim.github.io/ap-merge/output/merged.xml
+https://scour.ing/@evilgod/rss.xml?all_feeds=true&show_seen=true
 https://theweek.com/rss.xml
 https://firstlook.org/theintercept/feed/
 https://evilgodfahim.github.io/cd/curated_feed.xml
