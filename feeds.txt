@@ -1,4 +1,5 @@
 https://evilgodfahim.github.io/ap-merge/output/merged.xml
+https://firstlook.org/theintercept/feed/
 https://evilgodfahim.github.io/cd/curated_feed.xml
 https://evilgodfahim.github.io/wsjint/combined.xml
 https://evilgodfahim.github.io/curl/curated_feed.xml
