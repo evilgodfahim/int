@@ -22,7 +22,7 @@ LOCK_FILE = ".final_feed.lock"
 
 # Thresholds
 MIN_FEED_COUNT = 2
-SIMILARITY_THRESHOLD = 0.65
+SIMILARITY_THRESHOLD = 0.75
 TOP_N_ARTICLES = 100
 
 # Importance scoring weights
