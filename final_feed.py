@@ -21,7 +21,7 @@ LAST_SEEN_FILE = "last_seen_final.json"
 LOCK_FILE = ".final_feed.lock"
 
 # Thresholds
-MIN_FEED_COUNT = 3
+MIN_FEED_COUNT = 2
 SIMILARITY_THRESHOLD = 0.65
 TOP_N_ARTICLES = 100
 
